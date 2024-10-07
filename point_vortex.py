@@ -1,22 +1,24 @@
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation, PillowWriter
 import numpy as np
-    
+
+# Compute the velocity at a point (x, y) due to a set of point vortices
 def Velocity_at_point(xarr, yarr, carr, rsmall, x, y):
     dy = 0.05; dx = 0.05
     u_vel = -(streamfunction(xarr, yarr, carr, rsmall, x, y+dy) - streamfunction(xarr, yarr, carr, rsmall, x, y-dy))/2*dy
     v_vel =  (streamfunction(xarr, yarr, carr, rsmall, x+dx, y) - streamfunction(xarr, yarr, carr, rsmall, x-dx, y))/2*dx
     return u_vel, v_vel
-    
-def FE(xarr, yarr, carr, rsmall, x, y):
+
+# Update the position of the point vortices using the Forward Euler method
+def FE(xarr, yarr, carr, rsmall):
     dt= 1
     for i in range(0,len(xarr)):
         u_vel, v_vel = Velocity_at_point(xarr, yarr, carr, rsmall, xarr[i], yarr[i])
         xarr[i] = xarr[i] + dt*u_vel
         yarr[i] = yarr[i] + dt*v_vel
     return xarr, yarr
-    
-def Leapfrog(xarr, yarr,xarr_old,yarr_old, carr, rsmall, x, y):
+
+
+def Leapfrog(xarr, yarr,xarr_old,yarr_old, carr, rsmall):
     dt = 1
     for i in range(0,len(xarr)):
         u_vel, v_vel = Velocity_at_point(xarr, yarr, carr, rsmall, xarr[i], yarr[i])
@@ -50,7 +52,8 @@ def RK2(xarr, yarr, carr, rsmall, x, y):
     return xarr, yarr
 
     
-def Update_stream_field(xarr, yarr, carr, rsmall, x, y, xg, yg):
+def Update_stream_field(xarr, yarr, carr, rsmall, xg, yg, nr):
+
     for j in range(ng):
         for i in range(ng):
             streamx = streamfunction(xarr, yarr, carr, rsmall, xg[i], yg[j])
@@ -58,7 +61,7 @@ def Update_stream_field(xarr, yarr, carr, rsmall, x, y, xg, yg):
     return streamfield
     
 
-
+# Compute the streamfunction at a point (x, y) due to a set of point vortices
 def streamfunction(xarr, yarr, carr, rsmall, x, y):
     nv = len(carr)
     streamx = 0
@@ -119,7 +122,7 @@ def plotfield(xg, yg, field, fieldname):
     return
 
 
-def plotfield2(xg, yg, field, fieldname,xarr,yarr):
+def plotfield2(xg, yg, field, fieldname, xarr, yarr):
     '''
     Plot 2-D field on (x, y) plane.
     Input: xg - grid points in x
@@ -143,58 +146,23 @@ def plotfield2(xg, yg, field, fieldname,xarr,yarr):
 
 
 if __name__ == '__main__':
-    
-    '''
-    Main program script for running the point vortex model.
-    '''
 
-    # Choose number of point vortices to consider
-    nv=4
-    xarr = 3*(np.random.rand(nv)-0.5)+1
-    yarr = (np.random.rand(nv)-1)*0.5
-    carr = (np.random.rand(nv)-1.0)*0.5
-    
-    
-    nv= len(xarr)
-    x = 0.0
-    y = 1.0
-    rsmall = 1.e-10 # smallest distance used in Green function calculation
-    streamx = streamfunction(xarr, yarr, carr, rsmall, x, y)
-    #print('value of streamfunction at x, y = ',streamx)
-    velpt = Velocity_at_point(xarr, yarr, carr, rsmall, x, y)
     #print('value of velocity at x, y = ',velpt)
 
     # Loop over a grid of points on the (x, y) plane to find the
     # streamfunction field and then plot it.
     # nr*rscal is the half width of the square grid domain chosen.
     #
+
+    rsmall = 1.e-10
     nr = 10
     drscal = 0.2
     ng = 2*nr+1
     xg = drscal*(np.arange(ng)-nr)
-    print(xg)
-    
     yg = np.copy(xg)
     streamfield = np.zeros([ng, ng])
     streamname = 'streamfunction'
-    for j in range(ng):
-        for i in range(ng):
-            streamx = streamfunction(xarr, yarr, carr, rsmall, xg[i], yg[j])
-            streamfield[i, j] = streamx
 
-    plotfield2(xg, yg, streamfield, streamname,xarr,yarr)
-    print(len(streamfield))
-    print(np.size(streamfield))
-    print(streamfield)
-    
-    
-    xarr = [-1.5,-1.5,1.5,1.5]
-    yarr = [-0.1,0.1,-0.1,0.1]
-    carr = [5,5,5,10]
-    # xarr = [-1.5,1.5]
-    # yarr = [0,0]
-    # carr = [-5,5]
-    # nv = len(carr)
     nv=11
     theta = np.linspace(0,2*np.pi,nv)
     xarr = np.cos(theta)
@@ -209,10 +177,9 @@ if __name__ == '__main__':
     ystore[0,:] = yarr
     plt.figure(1)
     
-
     if k==0:
         k = k+1
-        xarr, yarr= FE(xarr, yarr, carr, rsmall, x, y)
+        xarr, yarr= FE(xarr, yarr, carr, rsmall)
         xstore[k,:] = xarr
         ystore[k,:] = yarr
 
@@ -220,15 +187,15 @@ if __name__ == '__main__':
         
         #xstore[k+1,:], ystore[k+1,:]= RK2(xstore[k,:], ystore[k,:], carr, rsmall, x, y)
 
-        xstore[k+1,:], ystore[k+1,:]= Leapfrog(xstore[k,:], ystore[k,:],xstore[k-1,:], ystore[k-1,:], carr, rsmall, x, y)
-        streamfield = Update_stream_field(xstore[k+1,:],ystore[k+1,:], carr, rsmall, x, y,xg,yg)
+        xstore[k+1,:], ystore[k+1,:]= Leapfrog(xstore[k,:], ystore[k,:],xstore[k-1,:], ystore[k-1,:], carr, rsmall)
+        streamfield = Update_stream_field(xstore[k+1,:],ystore[k+1,:], carr, rsmall, xg, yg, nr)
 
         k=k+1
 
         if k%1==0:
             plt.clf()
 
-            plotfield2(xg, yg, streamfield, streamname,xstore[k,:],ystore[k,:])
+            plotfield2(xg, yg, streamfield, streamname, xstore[k,:], ystore[k,:])
             plt.draw()
             plt.pause(0.001)
     plt.show()
